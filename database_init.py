@@ -5,28 +5,6 @@ from sqlalchemy import create_engine
 
 Base = declarative_base()
 
-# Create Item Table
-class Item(Base):
-    __tablename__ = 'item'
-
-    # Columns
-    item_id = Column(Integer, primary_key=True)
-    item_name = Column(String(128), nullable=False)
-    item_desc = Column(String(256))
-    item_price = Column(String(16))
-    category_id = ForeignKey(Integer, ForeignKey('category.category_id'))
-    category = relationship(ItemCategory)
-
-
-    # Provide a way for calling code to read from this table.
-    def get(self):
-        return {
-            'item_id': self.item_id,
-            'item_name': self.item_name,
-            'item_desc': self.item_desc,
-            'item_price': self.item_price
-        }
-
 
 # Create User Table
 class User(Base):
@@ -63,6 +41,29 @@ class ItemCategory(Base):
         return {
             'category_id': self.user_id,
             'category_name': self.user_name,
+        }
+
+
+# Create Item Table
+class Item(Base):
+    __tablename__ = 'item'
+
+    # Columns
+    item_id = Column(Integer, primary_key=True)
+    item_name = Column(String(128), nullable=False)
+    item_desc = Column(String(256))
+    item_price = Column(String(16))
+    category_id = Column(Integer, ForeignKey('item_category.category_id'))
+    category = relationship(ItemCategory)
+
+
+    # Provide a way for calling code to read from this table.
+    def get(self):
+        return {
+            'item_id': self.item_id,
+            'item_name': self.item_name,
+            'item_desc': self.item_desc,
+            'item_price': self.item_price
         }
 
 
