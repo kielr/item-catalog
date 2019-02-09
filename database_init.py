@@ -14,6 +14,9 @@ class Item(Base):
     item_name = Column(String(128), nullable=False)
     item_desc = Column(String(256))
     item_price = Column(String(16))
+    category_id = ForeignKey(Integer, ForeignKey('category.category_id'))
+    category = relationship(ItemCategory)
+
 
     # Provide a way for calling code to read from this table.
     def get(self):
@@ -50,9 +53,17 @@ class ItemCategory(Base):
     __tablename__ = 'item_category'
 
     # Columns
-    column_id = Column(Integer, primary_key=True)
-    column_name = Column(String(128), nullable=False)
-    column_user = relationship(User)
-    column_user_id = Column(Integer, ForeignKey('user.user_id'))
+    category_id = Column(Integer, primary_key=True)
+    category_name = Column(String(128), nullable=False)
+    category_user = relationship(User)
+    category_user_id = Column(Integer, ForeignKey('user.user_id'))
+
+    # Provide a way for calling code to read from this table.
+    def get(self):
+        return {
+            'category_id': self.user_id,
+            'category_name': self.user_name,
+        }
+
 
 Base.metadata.create_all(create_engine('sqlite:///itemcatalog.db'))
