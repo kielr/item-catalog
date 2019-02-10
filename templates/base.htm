@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="">
+<html lang="en">
+<META HTTP-EQUIV="CACHE-CONTROL" CONTENT="NO-CACHE">
 
 <head>
     <!-- Include bootstrap. Please see https://getbootstrap.com/ -->
@@ -12,11 +13,14 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
         crossorigin="anonymous">
 
+    <!-- Include the full version of jquery so that we can make calls to the server -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
     <!-- Need to include the google interface for the sign in button -->
     <script src="https://apis.google.com/js/platform.js" async defer></script>
 
     <!--  Include my own styles  -->
-    <link rel="stylesheet" text="text/css" href="{{url_for('static', filename='common.css')}}">
+    <link rel="stylesheet" text="text/css" href="{{url_for('static', filename='./stylesheets/common.css')}}">
 </head>
 
 <body>

@@ -1,6 +1,19 @@
 {% extends "base.htm" %}
 {% block app %}
-<div>
-
+<div class="jumbotron">
+    <h2>Please Login</h2>
+    <!-- Google Sign In -->
+    <span id="sign-in-button">
+        <span class="g-signin" data-scope="openid email" data-clientid="896165389680-iie3bbbpdq5jn4dqa6r8qj00qsj4flaq.apps.googleusercontent.com"
+            data-redirecturi="postmessage" data-accesstype="offline" data-cookiepolicy="single_host_origin"
+            data-callback="onLogin" data-approvalprompt="force">
+        </span>
+    </span>
+    <div id="success-popup" class="alert alert-success" role="alert"></div>
+    <div id="failure-popup" class="alert alert-danger" role="alert"></div>
+    <script>
+        var state = '{{STATE}}';
+    </script>
+    <script src="{{url_for('static', filename='./js/login.js')}}?v={{ range(0, 100000000000) | random }}"></script>
 </div>
 {% endblock %}
