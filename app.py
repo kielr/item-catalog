@@ -123,20 +123,37 @@ def sign_in():
     login_session['email'] = data['email']
 
     # Next, we need to check to see if the user exists in our User table
-    user_id = getUserByEmail(login_session['email'])
-    if user_id == None:
-        return
+    user = getUserByEmail(login_session['email'])
+    if user == None:
+        newUser = createUser(login_session)
+        if newUser == None:
+            response = make_response(
+                json.dumps("ERR: Error while creating a new user"), 500)
+            print("ERR: Error while creating a new user.")
+            response.headers['Content-Type'] = CONTENT_TYPE_JSON
+            return response
 
     return make_response(json.dumps("Success!"), 200)
 
 
 def getUserByEmail(email):
     try:
-        user = session.query(User).filter_by(email=email).one()
+        user = session.query(User).filter_by(user_email=email).one()
         return user
     except:
         return None
 
+
+def createUser(login_session):
+    try:
+        newUser = User(user_name=login_session['username'],
+                       user_email=login_session['email'], user_thumb=login_session['picture'])
+        session.add(newUser)
+        session.commit()
+        return getUserByEmail(login_session['email'])
+    except Exception as e:
+        print(e)
+        return None
 
 # Creates a new record in the item table.
 @app.route('/items', methods=['POST'])
