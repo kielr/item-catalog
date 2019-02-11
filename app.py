@@ -28,11 +28,13 @@ CONTENT_TYPE_JSON = 'application/json'
 CLIENT_ID = json.loads(
     open('gclient.json', 'r').read())['web']['client_id']
 
+
 # Serve the front page.
 @app.route('/', methods=['POST', 'GET'])
 def show_home():
     if request.method == 'GET':
         return render_template('base.htm')
+
 
 # Serves the login page.
 @app.route('/login')
@@ -42,6 +44,7 @@ def show_login():
                     for x in range(32))
     login_session['state'] = state
     return render_template('login.htm', STATE=state)
+
 
 # Handle sign in requests from the browser
 @app.route('/signin', methods=['POST'])
@@ -99,14 +102,14 @@ def sign_in():
         return response
 
     # Check to see if user is already logged in
-    # stored_credentials = login_session.get('credentials')
-    # stored_gplus_id = login_session.get('gplus_id')
-    # if stored_credentials is not None and gplus_id == stored_gplus_id:
-    #     print("Current user is already connected")
-    #     response = make_response(json.dumps(
-    #         'Current user is already connected.'), 200)
-    #     response.headers['Content-Type'] = CONTENT_TYPE_JSON
-    #     return response
+    stored_credentials = login_session.get('credentials')
+    stored_gplus_id = login_session.get('gplus_id')
+    if stored_credentials is not None and gplus_id == stored_gplus_id:
+        print("Current user is already connected")
+        response = make_response(json.dumps(
+            'Current user is already connected.'), 200)
+        response.headers['Content-Type'] = CONTENT_TYPE_JSON
+        return response
 
     # Store the access token in the session for later use.
     login_session['credentials'] = credentials.to_json()
@@ -132,6 +135,10 @@ def sign_in():
             print("ERR: Error while creating a new user.")
             response.headers['Content-Type'] = CONTENT_TYPE_JSON
             return response
+
+    # Store user in the session
+    login_session['user'] = user.get()
+    print(user.get())
 
     return make_response(json.dumps("Success!"), 200)
 

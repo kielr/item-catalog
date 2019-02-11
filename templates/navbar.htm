@@ -1,4 +1,4 @@
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
     <a class="navbar-brand" href="{{url_for('show_home')}}">Catalog App</a>
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
         aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -6,8 +6,22 @@
     </button>
 
     <div class="collapse navbar-collapse" id="navbarSupportedContent">
-        <ul class="navbar-nav mr-auto">
-        </ul>
+        <!-- <ul class="navbar-nav mr-auto"></ul> -->
+        {% if not session.user %}
         <a class="btn btn-primary" href="{{url_for('show_login')}}" role="button">Login</a>
+        {% endif %}
+        {% if session.user %}
+        <div class="dropdown">
+            <a class="btn btn-primary dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-toggle="dropdown"
+                aria-haspopup="true" aria-expanded="false">
+                <img src="{{ session['picture']}}" alt="profile image" class="rounded-circle avatar" alt="avatar">
+            </a>
+
+            <div class="dropdown-menu" aria-labelledby="dropdownMenuLink">
+                <a class="dropdown-item" href="#">Logout</a>
+                <a class="dropdown-item" href="#">Add Item</a>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </nav>
