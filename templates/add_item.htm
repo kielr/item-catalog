@@ -1,0 +1,44 @@
+{% extends "base.htm" %}
+{% block app %}
+<div>
+    <div class="col-md-12 padding-none">
+        <h1>New Item</h1>
+        <hr>
+    </div>
+    <div>
+        <div class="col-md-12">
+            <form method="post">
+                <div class="form-group">
+                    <label for="name">Name:</label>
+                    <input type="text" maxlength="50" class="form-control" name="name" placeholder="Name">
+                    <label for="description">Description:</label>
+                    <textarea class="form-control" maxlength="250" rows="3" name="description" placeholder="Description"></textarea>
+                    <label for="price">Price:</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" maxlength="10" name="price" placeholder="Price">
+                    </div>
+                    <div class="form-group">
+                        <label for="Category">Category:</label>
+                        <select class="form-control" name="category">
+                            {% for category in categories %}
+                            {% if item and item.category_id == category.category_id %}
+                            <option id="{{category.category_id}}" value="{{category.category_id}}" selected>{{category.category_name}}</option>
+                            {% else %}
+                            <option id="{{category.category_id}}" value="{{category.category_id}}">{{category.category_name}}</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-success" id="submit" type="submit">
+                    <span aria-hidden="true"></span>Create</button>
+                <a href="{{url_for('show_home')}}" class="btn btn-danger">
+                    <span aria-hidden="true"></span>
+                    Cancel
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

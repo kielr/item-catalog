@@ -1,4 +1,4 @@
-from flask import Flask, request, make_response, jsonify, render_template
+from flask import Flask, flash, request, make_response, jsonify, render_template, redirect, url_for
 from flask import session as login_session
 from database_init import *
 from sqlalchemy import create_engine, asc
@@ -33,13 +33,13 @@ CLIENT_ID = json.loads(
 @app.route('/', methods=['POST', 'GET'])
 def show_home():
     if request.method == 'GET':
-        return render_template('base.htm')
+        return render_template('home.htm')
 
 
 # Serves the login page.
 @app.route('/login')
 def show_login():
-    # Generate a STATE token to protect against forgery. From Udacity lesson
+    # Generate a STATE token to protect against forgery.
     state = ''.join(random.choice(string.ascii_uppercase + string.digits)
                     for x in range(32))
     login_session['state'] = state
@@ -102,14 +102,14 @@ def sign_in():
         return response
 
     # Check to see if user is already logged in
-    stored_credentials = login_session.get('credentials')
-    stored_gplus_id = login_session.get('gplus_id')
-    if stored_credentials is not None and gplus_id == stored_gplus_id:
-        print("Current user is already connected")
-        response = make_response(json.dumps(
-            'Current user is already connected.'), 200)
-        response.headers['Content-Type'] = CONTENT_TYPE_JSON
-        return response
+    # stored_credentials = login_session.get('credentials')
+    # stored_gplus_id = login_session.get('gplus_id')
+    # if stored_credentials is not None and gplus_id == stored_gplus_id:
+    #     print("Current user is already connected")
+    #     response = make_response(json.dumps(
+    #         'Current user is already connected.'), 200)
+    #     response.headers['Content-Type'] = CONTENT_TYPE_JSON
+    #     return response
 
     # Store the access token in the session for later use.
     login_session['credentials'] = credentials.to_json()
@@ -138,9 +138,69 @@ def sign_in():
 
     # Store user in the session
     login_session['user'] = user.get()
-    print(user.get())
 
     return make_response(json.dumps("Success!"), 200)
+
+
+# Handle sign out requests from the browser
+@app.route('/signout')
+def sign_out():
+    # Only disconnect a connected user.
+    credentials = login_session.get('credentials')
+    if credentials is None:
+        response = make_response(json.dumps('Current user not connected'), 401)
+        response.headers['Content-Type'] = CONTENT_TYPE_JSON
+        return response
+
+    access_token = json.loads(credentials)['access_token']
+    url = 'https://accounts.google.com/o/oauth2/revoke?token=%s' % access_token
+    h = httplib2.Http()
+    result = h.request(url, 'GET')[0]
+    if result['status'] == '200':
+        # Reset the user's session.
+        del login_session['credentials']
+        del login_session['gplus_id']
+        del login_session['user']
+        del login_session['username']
+        del login_session['email']
+        del login_session['picture']
+
+        # response = make_response(json.dumps("Successfully disconnected."), 200)
+        # response.headers['Content-Type'] = CONTENT_TYPE_JSON
+        return render_template('home.htm')
+    else:
+        response = make_response(json.dumps('Failed to revoke token'), 400)
+        print(result)
+        response.headers['Content-Type'] = CONTENT_TYPE_JSON
+        return response
+
+
+# Handle add item requests
+@app.route('/additem', methods=['POST', 'GET'])
+def add_item():
+    categories = session.query(ItemCategory).all()
+    print(categories)
+    if request.method == 'GET':
+        return render_template('add_item.htm', categories=categories)
+    else:
+        return
+
+
+@app.route('/addcategory', methods=['POST', 'GET'])
+def add_category():
+    if request.method == 'GET':
+        return render_template('add_category.htm')
+    else:
+        if 'user' in login_session:
+            user = login_session['user']
+            new_category = ItemCategory(
+                category_name=request.form['name'], category_user_id=user['user_id'])
+            session.add(new_category)
+            session.commit()
+            flash("Category successfully added.", "success")
+            return redirect(url_for('show_home'))
+        else:
+            return redirect(url_for('login'))
 
 
 def getUserByEmail(email):
@@ -161,6 +221,7 @@ def createUser(login_session):
     except Exception as e:
         print(e)
         return None
+
 
 # Creates a new record in the item table.
 @app.route('/items', methods=['POST'])

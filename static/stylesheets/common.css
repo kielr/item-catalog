@@ -1,3 +1,11 @@
 .avatar {
     height: 3em;
 }
+
+.appContent {
+    padding: 2em;
+}
+
+label {
+    padding-top: 1em;
+}
