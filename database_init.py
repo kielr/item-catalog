@@ -39,8 +39,8 @@ class ItemCategory(Base):
     # Provide a way for calling code to read from this table.
     def get(self):
         return {
-            'category_id': self.user_id,
-            'category_name': self.user_name,
+            'category_id': self.category_id,
+            'category_name': self.category_name,
         }
 
 
@@ -56,8 +56,8 @@ class Item(Base):
     category_id = Column(Integer, ForeignKey('item_category.category_id'))
     category = relationship(ItemCategory)
 
-
     # Provide a way for calling code to read from this table.
+
     def get(self):
         return {
             'item_id': self.item_id,

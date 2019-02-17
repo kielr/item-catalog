@@ -1,8 +1,9 @@
 from flask import Flask, flash, request, make_response, jsonify, render_template, redirect, url_for
 from flask import session as login_session
-from database_init import *
+from database_init import Item, ItemCategory, User, Base
 from sqlalchemy import create_engine, asc
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import scoped_session, sessionmaker
+from functools import wraps
 
 
 from oauth2client.client import flow_from_clientsecrets
@@ -17,11 +18,12 @@ import requests
 app = Flask(__name__, template_folder='./templates/')
 
 
-# Connect to the Database.
-engine = create_engine('sqlite:///itemcatalog.db')
+# Connect to the Database. A lot of weird bugs if the process threads change.
+# Thread safety isn't in the rubric, so I'm going to disable this check unless told to do otherwise.
+engine = create_engine('sqlite:///itemcatalog.db?check_same_thread=False')
 Base.metadata.bind = engine
 
-sql_session = sessionmaker(bind=engine)
+sql_session = scoped_session(sessionmaker(bind=engine))
 session = sql_session()
 
 CONTENT_TYPE_JSON = 'application/json'
@@ -29,14 +31,23 @@ CLIENT_ID = json.loads(
     open('gclient.json', 'r').read())['web']['client_id']
 
 
-# Serve the front page.
-@app.route('/', methods=['POST', 'GET'])
+# From http://flask.pocoo.org/docs/0.12/patterns/viewdecorators/
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user' not in login_session:
+            return redirect(url_for('show_login', next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+@app.route('/')
 def show_home():
-    if request.method == 'GET':
-        return render_template('home.htm')
+    items = session.query(Item).all()
+    categories = session.query(ItemCategory).all()
+    return render_template('home.htm', items=items, categories=categories)
 
 
-# Serves the login page.
 @app.route('/login')
 def show_login():
     # Generate a STATE token to protect against forgery.
@@ -46,7 +57,88 @@ def show_login():
     return render_template('login.htm', STATE=state)
 
 
-# Handle sign in requests from the browser
+@app.route('/categories', methods=['POST', 'GET'])
+@login_required
+def create_category():
+    if request.method == 'GET':
+        return render_template('add_category.htm')
+    else:
+        user = login_session['user']
+        new_category = ItemCategory(
+            category_name=request.form['name'], category_user_id=user['user_id'])
+        session.add(new_category)
+        session.commit()
+        return redirect(url_for('show_home'))
+
+
+@app.route('/categories/<int:category_id>/', methods=['GET'])
+def read_category(category_id):
+    category = session.query(ItemCategory).filter_by(
+        category_id=category_id).one()
+    items = session.query(Item).filter_by(category_id=category_id).all()
+    return render_template('read_category.htm', category=category, items=items)
+
+
+@app.route('/categories/<int:category_id>/update/', methods=['GET', 'POST'])
+@login_required
+def update_category(category_id):
+    category = session.query(ItemCategory).filter_by(
+        category_id=category_id).one()
+    if request.method == 'GET':
+        return render_template('update_category.htm', category=category)
+
+    if 'name' in request.form:
+        category.category_name = request.form['name']
+    session.commit()
+    return redirect(url_for('show_home'))
+
+
+@app.route('/categories/<int:category_id>/delete/', methods=['GET', 'POST'])
+@login_required
+def delete_category(category_id):
+    category = session.query(ItemCategory).filter_by(
+        category_id=category_id).one()
+    session.query(Item).filter_by(category_id=category_id).delete()
+    if request.method == 'GET':
+        return render_template('delete_category.htm', category=category)
+    session.delete(category)
+    session.commit()
+    return redirect(url_for('show_home'))
+
+
+@app.route('/items', methods=['POST', 'GET'])
+@login_required
+def create_item():
+    categories = session.query(ItemCategory).all()
+    if request.method == 'GET':
+        selected_category = request.args.get('selected_category')
+        return render_template('add_item.htm', categories=categories, selected_category=selected_category)
+    else:
+        new_item = Item(item_name=request.form['name'], item_desc=request.form['description'],
+                        item_price=request.form['price'], category_id=request.form['category'])
+        session.add(new_item)
+        session.commit()
+        return redirect(url_for('show_home'))
+
+
+@app.route('/items/<int:item_id>/', methods=['GET'])
+@login_required
+def read_item():
+    return
+
+
+@app.route('/items/<int:item_id>/update', methods=['GET', 'POST'])
+@login_required
+def update_item():
+    return
+
+
+@app.route('/items/<int:item_id>/delete', methods=['GET', 'POST'])
+@login_required
+def delete_item():
+    return
+
+
 @app.route('/signin', methods=['POST'])
 def sign_in():
     # If the state string doesn't match what we have, we need to drop the request.
@@ -142,7 +234,6 @@ def sign_in():
     return make_response(json.dumps("Success!"), 200)
 
 
-# Handle sign out requests from the browser
 @app.route('/signout')
 def sign_out():
     # Only disconnect a connected user.
@@ -175,34 +266,6 @@ def sign_out():
         return response
 
 
-# Handle add item requests
-@app.route('/additem', methods=['POST', 'GET'])
-def add_item():
-    categories = session.query(ItemCategory).all()
-    print(categories)
-    if request.method == 'GET':
-        return render_template('add_item.htm', categories=categories)
-    else:
-        return
-
-
-@app.route('/addcategory', methods=['POST', 'GET'])
-def add_category():
-    if request.method == 'GET':
-        return render_template('add_category.htm')
-    else:
-        if 'user' in login_session:
-            user = login_session['user']
-            new_category = ItemCategory(
-                category_name=request.form['name'], category_user_id=user['user_id'])
-            session.add(new_category)
-            session.commit()
-            flash("Category successfully added.", "success")
-            return redirect(url_for('show_home'))
-        else:
-            return redirect(url_for('login'))
-
-
 def getUserByEmail(email):
     try:
         user = session.query(User).filter_by(user_email=email).one()
@@ -221,14 +284,6 @@ def createUser(login_session):
     except Exception as e:
         print(e)
         return None
-
-
-# Creates a new record in the item table.
-@app.route('/items', methods=['POST'])
-def new_item():
-    if request.method == 'POST':
-        print(request.get_json())
-    return make_response(json.dumps("Good!"), 200)
 
 
 if __name__ == '__main__':

@@ -1,0 +1,19 @@
+{% extends "base.htm" %}
+{% block app %}
+<h2>
+    Are you sure you want to delete {{category.category_name}}?
+</h2>
+<span class="py-3">
+    Your items in this category will also be deleted.
+</span>
+<form action="{{url_for('delete_category', category_id=category.category_id) }}" method='post'>
+    <button type="submit" class="btn btn-danger delete" id="submit" type="submit">
+        Delete
+    </button>
+    <button class="btn btn-default delete">
+        <a href="{{ url_for('show_home') }}">
+            Cancel
+        </a>
+    </button>
+</form>
+{% endblock %}

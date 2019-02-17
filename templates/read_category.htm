@@ -4,32 +4,29 @@
     <div class="row">
         <div class="col-md-12">
             <h2>
-                <span>Categories</span>
+                <span>Category: {{category.category_name}}</span>
             </h2>
             <div class="pull-right py-3">
-                <a class="btn btn-success" href="{{ url_for('create_category') }}">
-                    Add Category
+                <a class="btn btn-success" href="{{ url_for('create_item', selected_category=category.category_id) }}">
+                    Add Item
                 </a>
             </div>
         </div>
     </div>
     <ul class="list-group w-75">
-        {% for category in categories %}
+        {% for item in items %}
         <li class="list-group-item">
             <div class="row">
                 <div class="col-lg-12">
                     <a class="d-inline btn float-left" href="{{ url_for('read_category', category_id=category.category_id) }}">
-                        {{category.category_name }}
+                        {{item.item_name }}
                     </a>
                     <div class="float-right">
-                        <a class="btn btn-link" href="{{ url_for('read_category', category_id=category.category_id) }}">
-                            Show Items
-                        </a>
-                        {% if category.user_id == session.user_id %}
-                        <a class="btn btn-primary" href="{{ url_for('update_category', category_id=category.category_id) }}">
+                        {% if item.user_id == session.user_id %}
+                        <a class="btn btn-primary" href="{{ url_for('update_item', item_id=item.item_id) }}">
                             Edit
                         </a>
-                        <a class="btn btn-danger" href="{{ url_for('delete_category', category_id=category.category_id)}}">
+                        <a class="btn btn-danger" href="{{ url_for('delete_item', item_id=item.item_id)}}">
                             Delete
                         </a>
                         {% endif %}

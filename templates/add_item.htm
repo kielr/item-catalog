@@ -21,7 +21,7 @@
                         <label for="Category">Category:</label>
                         <select class="form-control" name="category">
                             {% for category in categories %}
-                            {% if item and item.category_id == category.category_id %}
+                            {% if selected_category and selected_category | int == category.category_id %}
                             <option id="{{category.category_id}}" value="{{category.category_id}}" selected>{{category.category_name}}</option>
                             {% else %}
                             <option id="{{category.category_id}}" value="{{category.category_id}}">{{category.category_name}}</option>
