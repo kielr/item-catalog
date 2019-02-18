@@ -25,7 +25,7 @@
                         <a class="btn btn-link" href="{{ url_for('read_category', category_id=category.category_id) }}">
                             Show Items
                         </a>
-                        {% if category.user_id == session.user_id %}
+                        {% if session.user and category.category_user_id == session.user.user_id %}
                         <a class="btn btn-primary" href="{{ url_for('update_category', category_id=category.category_id) }}">
                             Edit
                         </a>

@@ -1,0 +1,16 @@
+{% extends "base.htm" %}
+{% block app %}
+<h2>
+    Are you sure you want to delete {{item.item_name}}?
+</h2>
+<form action="{{url_for('delete_item', item_id=item.item_id) }}" method='post'>
+    <button type="submit" class="btn btn-danger delete" id="submit" type="submit">
+        Delete
+    </button>
+    <button class="btn btn-default delete">
+        <a href="{{ url_for('show_home') }}">
+            Cancel
+        </a>
+    </button>
+</form>
+{% endblock %}

@@ -1,4 +1,5 @@
-from flask import Flask, flash, request, make_response, jsonify, render_template, redirect, url_for
+from flask import Flask, flash, request, make_response
+from flask import jsonify, render_template, redirect, url_for
 from flask import session as login_session
 from database_init import Item, ItemCategory, User, Base
 from sqlalchemy import create_engine, asc
@@ -17,9 +18,10 @@ import requests
 # Declare app.
 app = Flask(__name__, template_folder='./templates/')
 
-
-# Connect to the Database. A lot of weird bugs if the process threads change.
-# Thread safety isn't in the rubric, so I'm going to disable this check unless told to do otherwise.
+# Connect to the Database.
+# A lot of weird bugs if the process threads change.
+# Thread safety isn't in the rubric.
+# So I'm going to disable this check unless told to do otherwise.
 engine = create_engine('sqlite:///itemcatalog.db?check_same_thread=False')
 Base.metadata.bind = engine
 
@@ -41,11 +43,28 @@ def login_required(f):
     return decorated_function
 
 
+@app.route('/items/json', methods=['GET'])
+def get_items_json():
+    items = session.query(Item).all()
+    return jsonify(items=[item.get() for item in items])
+
+
+@app.route('/items/<int:item_id>/json', methods=['GET'])
+def get_item_json(item_id):
+    item = session.query(Item).filter_by(item_id=item_id).one()
+    return jsonify(item.get())
+
+
+@app.route('/categories/json', methods=['GET'])
+def get_category_json():
+    categories = session.query(ItemCategory).all()
+    return jsonify(categories=[category.get() for category in categories])
+
+
 @app.route('/')
 def show_home():
-    items = session.query(Item).all()
     categories = session.query(ItemCategory).all()
-    return render_template('home.htm', items=items, categories=categories)
+    return render_template('home.htm', categories=categories)
 
 
 @app.route('/login')
@@ -65,7 +84,8 @@ def create_category():
     else:
         user = login_session['user']
         new_category = ItemCategory(
-            category_name=request.form['name'], category_user_id=user['user_id'])
+            category_name=request.form['name'],
+            category_user_id=user['user_id'])
         session.add(new_category)
         session.commit()
         return redirect(url_for('show_home'))
@@ -112,10 +132,16 @@ def create_item():
     categories = session.query(ItemCategory).all()
     if request.method == 'GET':
         selected_category = request.args.get('selected_category')
-        return render_template('add_item.htm', categories=categories, selected_category=selected_category)
+        return render_template('add_item.htm',
+                               categories=categories,
+                               selected_category=selected_category)
     else:
-        new_item = Item(item_name=request.form['name'], item_desc=request.form['description'],
-                        item_price=request.form['price'], category_id=request.form['category'])
+        new_item = Item(item_name=request.form['name'],
+                        item_desc=request.form['description'],
+                        item_price=request.form['price'],
+                        user_id=login_session['user']['user_id'])
+        if 'category' in request.form:
+            new_item.category_id = request.form['category']
         session.add(new_item)
         session.commit()
         return redirect(url_for('show_home'))
@@ -129,19 +155,43 @@ def read_item():
 
 @app.route('/items/<int:item_id>/update', methods=['GET', 'POST'])
 @login_required
-def update_item():
-    return
+def update_item(item_id):
+    item = session.query(Item).filter_by(
+        item_id=item_id).one()
+    categories = session.query(ItemCategory).all()
+    if request.method == 'GET':
+        return render_template('update_item.htm', item=item,
+                               categories=categories)
+
+    if 'name' in request.form:
+        item.item_name = request.form['name']
+    if 'description' in request.form:
+        item.item_desc = request.form['description']
+    if 'price' in request.form:
+        item.item_price = request.form['price']
+    if 'category' in request.form:
+        item.category_id = request.form['category']
+
+    session.commit()
+    return redirect(url_for('show_home'))
 
 
 @app.route('/items/<int:item_id>/delete', methods=['GET', 'POST'])
 @login_required
-def delete_item():
-    return
+def delete_item(item_id):
+    item = session.query(Item).filter_by(
+        item_id=item_id).one()
+    if request.method == 'GET':
+        return render_template('delete_item.htm', item=item)
+    session.delete(item)
+    session.commit()
+    return redirect(url_for('show_home'))
 
 
 @app.route('/signin', methods=['POST'])
 def sign_in():
-    # If the state string doesn't match what we have, we need to drop the request.
+    # If the state string doesn't match what we have,
+    # we need to drop the request.
     if request.args.get('state') != login_session['state']:
         print('ERR: State mismatch')
         response = make_response(json.dumps('ERR: State mismatch'), 401)
@@ -150,10 +200,14 @@ def sign_in():
     # Otherwise, let's continue adding this user
     authCode = request.data
 
-    # It's possible for this to fail, we want to tell the web browser that we've failed if an error occurs.
+    # It's possible for this to fail,
+    # we want to tell the web browser
+    # that we've failed if an error occurs.
     # Let's use a try catch
     try:
-        # Get secrets from local client secrets. Obviously in a real web app the client_secrets would be stored safely somewhere,
+        # Get secrets from local client secrets.
+        # Obviously in a real web app the
+        # client_secrets would be stored safely somewhere,
         # but for now we can just load them directly here.
         oauth = flow_from_clientsecrets('gclient.json', scope='')
         oauth.redirect_uri = 'postmessage'
@@ -194,14 +248,14 @@ def sign_in():
         return response
 
     # Check to see if user is already logged in
-    # stored_credentials = login_session.get('credentials')
-    # stored_gplus_id = login_session.get('gplus_id')
-    # if stored_credentials is not None and gplus_id == stored_gplus_id:
-    #     print("Current user is already connected")
-    #     response = make_response(json.dumps(
-    #         'Current user is already connected.'), 200)
-    #     response.headers['Content-Type'] = CONTENT_TYPE_JSON
-    #     return response
+    stored_credentials = login_session.get('credentials')
+    stored_gplus_id = login_session.get('gplus_id')
+    if stored_credentials is not None and gplus_id == stored_gplus_id:
+        print("Current user is already connected")
+        response = make_response(json.dumps(
+            'Current user is already connected.'), 200)
+        response.headers['Content-Type'] = CONTENT_TYPE_JSON
+        return response
 
     # Store the access token in the session for later use.
     login_session['credentials'] = credentials.to_json()
@@ -219,9 +273,9 @@ def sign_in():
 
     # Next, we need to check to see if the user exists in our User table
     user = getUserByEmail(login_session['email'])
-    if user == None:
+    if user is None:
         newUser = createUser(login_session)
-        if newUser == None:
+        if newUser is None:
             response = make_response(
                 json.dumps("ERR: Error while creating a new user"), 500)
             print("ERR: Error while creating a new user.")
@@ -256,8 +310,6 @@ def sign_out():
         del login_session['email']
         del login_session['picture']
 
-        # response = make_response(json.dumps("Successfully disconnected."), 200)
-        # response.headers['Content-Type'] = CONTENT_TYPE_JSON
         return render_template('home.htm')
     else:
         response = make_response(json.dumps('Failed to revoke token'), 400)
@@ -270,14 +322,15 @@ def getUserByEmail(email):
     try:
         user = session.query(User).filter_by(user_email=email).one()
         return user
-    except:
+    except Exception:
         return None
 
 
 def createUser(login_session):
     try:
         newUser = User(user_name=login_session['username'],
-                       user_email=login_session['email'], user_thumb=login_session['picture'])
+                       user_email=login_session['email'],
+                       user_thumb=login_session['picture'])
         session.add(newUser)
         session.commit()
         return getUserByEmail(login_session['email'])

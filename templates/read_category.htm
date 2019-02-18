@@ -18,11 +18,11 @@
         <li class="list-group-item">
             <div class="row">
                 <div class="col-lg-12">
-                    <a class="d-inline btn float-left" href="{{ url_for('read_category', category_id=category.category_id) }}">
-                        {{item.item_name }}
-                    </a>
+                    <div class="float-left btn-align">
+                        Item: {{item.item_name }}
+                    </div>
                     <div class="float-right">
-                        {% if item.user_id == session.user_id %}
+                        {% if session.user %}
                         <a class="btn btn-primary" href="{{ url_for('update_item', item_id=item.item_id) }}">
                             Edit
                         </a>
@@ -30,6 +30,20 @@
                             Delete
                         </a>
                         {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="float-left btn-align">
+                        Description: {{item.item_desc}}
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="float-left btn-align">
+                        Price: ${{item.item_price}}
                     </div>
                 </div>
             </div>

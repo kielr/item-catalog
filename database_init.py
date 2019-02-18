@@ -53,6 +53,10 @@ class Item(Base):
     item_name = Column(String(128), nullable=False)
     item_desc = Column(String(256))
     item_price = Column(String(16))
+
+    user_id = Column(Integer, ForeignKey('user.user_id'))
+    user = relationship(User)
+
     category_id = Column(Integer, ForeignKey('item_category.category_id'))
     category = relationship(ItemCategory)
 
@@ -63,7 +67,8 @@ class Item(Base):
             'item_id': self.item_id,
             'item_name': self.item_name,
             'item_desc': self.item_desc,
-            'item_price': self.item_price
+            'item_price': self.item_price,
+            'item_user_id': self.user_id
         }
 
 

@@ -6,6 +6,11 @@
     padding: 2em;
 }
 
+.btn-align {
+    vertical-align: middle;
+    padding: .375rem .75rem;
+}
+
 label {
     padding-top: 1em;
 }
