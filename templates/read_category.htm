@@ -22,7 +22,7 @@
                         Item: {{item.item_name }}
                     </div>
                     <div class="float-right">
-                        {% if session.user %}
+                        {% if session.user and session.user.user_id == item.user_id %}
                         <a class="btn btn-primary" href="{{ url_for('update_item', item_id=item.item_id) }}">
                             Edit
                         </a>

@@ -35,6 +35,11 @@ CLIENT_ID = json.loads(
 
 # From http://flask.pocoo.org/docs/0.12/patterns/viewdecorators/
 def login_required(f):
+    """ Decorator method to make checking if the user is logged in easier.
+
+    Returns:
+        Redirect the client to the log in page.
+    """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user' not in login_session:
@@ -45,30 +50,56 @@ def login_required(f):
 
 @app.route('/items/json', methods=['GET'])
 def get_items_json():
+    """ Gets the items in the database represented in JSON format.
+
+    Returns:
+        on GET: items in the database represented in JSON format.
+    """
     items = session.query(Item).all()
     return jsonify(items=[item.get() for item in items])
 
 
 @app.route('/items/<int:item_id>/json', methods=['GET'])
 def get_item_json(item_id):
+    """ Gets a specific item in the database represented in JSON format.
+
+    Returns:
+        on GET: item in the database represented in JSON format.
+    """
     item = session.query(Item).filter_by(item_id=item_id).one()
     return jsonify(item.get())
 
 
 @app.route('/categories/json', methods=['GET'])
 def get_category_json():
+    """ Gets the categories in the database represented in JSON format.
+
+    Returns:
+        on GET: categories in the database represented in JSON format.
+    """
     categories = session.query(ItemCategory).all()
     return jsonify(categories=[category.get() for category in categories])
 
 
 @app.route('/')
 def show_home():
+    """ Shows the home page which by default
+    renders the categories in the database.
+
+    Returns:
+        on GET: home page.
+    """
     categories = session.query(ItemCategory).all()
     return render_template('home.htm', categories=categories)
 
 
 @app.route('/login')
 def show_login():
+    """ Show the login page.
+
+    Returns:
+        on GET: Page to log in with a google user.
+    """
     # Generate a STATE token to protect against forgery.
     state = ''.join(random.choice(string.ascii_uppercase + string.digits)
                     for x in range(32))
@@ -79,6 +110,11 @@ def show_login():
 @app.route('/categories', methods=['POST', 'GET'])
 @login_required
 def create_category():
+    """ Gets the items in the database represented in JSON format.
+
+    Returns:
+        on GET: items in the database represented in JSON format.
+    """
     if request.method == 'GET':
         return render_template('add_category.htm')
     else:
@@ -93,6 +129,11 @@ def create_category():
 
 @app.route('/categories/<int:category_id>/', methods=['GET'])
 def read_category(category_id):
+    """ Shows all items in a category.
+
+    Returns:
+        on GET: HTML page for a single category and its items.
+    """
     category = session.query(ItemCategory).filter_by(
         category_id=category_id).one()
     items = session.query(Item).filter_by(category_id=category_id).all()
@@ -102,8 +143,21 @@ def read_category(category_id):
 @app.route('/categories/<int:category_id>/update/', methods=['GET', 'POST'])
 @login_required
 def update_category(category_id):
+    """ Provides a form to update a category record in the database.
+
+    Returns:
+        on GET: HTML page with a form that allows the user to POST.
+        on POST: commit the form changes to the
+            database and return the user to home.
+    """
     category = session.query(ItemCategory).filter_by(
         category_id=category_id).one()
+    user = login_session.get('user')
+    if user['user_id'] != category.category_user_id:
+        response = make_response(json.dumps(
+            'Current user is not authorized to edit this record.'), 401)
+        response.headers['Content-Type'] = CONTENT_TYPE_JSON
+        return response
     if request.method == 'GET':
         return render_template('update_category.htm', category=category)
 
@@ -116,11 +170,26 @@ def update_category(category_id):
 @app.route('/categories/<int:category_id>/delete/', methods=['GET', 'POST'])
 @login_required
 def delete_category(category_id):
+    """ Provides a way for the user to
+    delete a category record from the database.
+
+    Returns:
+        on GET: HTML page that confirms to the
+            user that the category will be deleted
+        on POST: commit the form changes to the
+            database and return the user to home.
+    """
     category = session.query(ItemCategory).filter_by(
         category_id=category_id).one()
-    session.query(Item).filter_by(category_id=category_id).delete()
+    user = login_session.get('user')
+    if user['user_id'] != category.category_user_id:
+        response = make_response(json.dumps(
+            'Current user is not authorized to delete this record.'), 401)
+        response.headers['Content-Type'] = CONTENT_TYPE_JSON
+        return response
     if request.method == 'GET':
         return render_template('delete_category.htm', category=category)
+    session.query(Item).filter_by(category_id=category_id).delete()
     session.delete(category)
     session.commit()
     return redirect(url_for('show_home'))
@@ -129,6 +198,14 @@ def delete_category(category_id):
 @app.route('/items', methods=['POST', 'GET'])
 @login_required
 def create_item():
+    """ Provides a way for the user to
+    create a new item record in the database
+
+    Returns:
+        on GET: HTML page that shows a form for item
+        on POST: commit the form changes to the
+            database and return the user to home.
+    """
     categories = session.query(ItemCategory).all()
     if request.method == 'GET':
         selected_category = request.args.get('selected_category')
@@ -147,22 +224,29 @@ def create_item():
         return redirect(url_for('show_home'))
 
 
-@app.route('/items/<int:item_id>/', methods=['GET'])
-@login_required
-def read_item():
-    return
-
-
 @app.route('/items/<int:item_id>/update', methods=['GET', 'POST'])
 @login_required
 def update_item(item_id):
+    """ Provides a way for the user to
+    update an item record in the database
+
+    Returns:
+        on GET: HTML page that shows a form for item
+        on POST: commit the form changes to the
+            database and return the user to home.
+    """
     item = session.query(Item).filter_by(
         item_id=item_id).one()
     categories = session.query(ItemCategory).all()
+    user = login_session.get('user')
+    if user['user_id'] != item.user_id:
+        response = make_response(json.dumps(
+            'Current user is not authorized to edit this record.'), 401)
+        response.headers['Content-Type'] = CONTENT_TYPE_JSON
+        return response
     if request.method == 'GET':
         return render_template('update_item.htm', item=item,
                                categories=categories)
-
     if 'name' in request.form:
         item.item_name = request.form['name']
     if 'description' in request.form:
@@ -179,8 +263,21 @@ def update_item(item_id):
 @app.route('/items/<int:item_id>/delete', methods=['GET', 'POST'])
 @login_required
 def delete_item(item_id):
+    """ Provides a way for the user to
+    delete an item record in the database
+
+    Returns:
+        on GET: HTML page that shows a confirmation message for item
+        on POST: commit the delete to the database.
+    """
+    user = login_session.get('user')
     item = session.query(Item).filter_by(
         item_id=item_id).one()
+    if user['user_id'] != item.user_id:
+        response = make_response(json.dumps(
+            'Current user is not authorized to delete this record.'), 401)
+        response.headers['Content-Type'] = CONTENT_TYPE_JSON
+        return response
     if request.method == 'GET':
         return render_template('delete_item.htm', item=item)
     session.delete(item)
@@ -190,6 +287,14 @@ def delete_item(item_id):
 
 @app.route('/signin', methods=['POST'])
 def sign_in():
+    """ Uses google API to log a user into
+    the app.
+
+    Returns:
+        on POST: Perform various checks and
+            put the returned user from google into our
+            current session.
+    """
     # If the state string doesn't match what we have,
     # we need to drop the request.
     if request.args.get('state') != login_session['state']:
@@ -267,14 +372,15 @@ def sign_in():
     answer = requests.get(userinfo_url, params=params)
     data = json.loads(answer.text)
 
-    login_session['username'] = data['name']
-    login_session['picture'] = data['picture']
+    login_session['username'] = data['name'] if 'name' in data else ""
+    login_session['picture'] = data['picture'] if 'picture' in data else ""
     login_session['email'] = data['email']
 
     # Next, we need to check to see if the user exists in our User table
     user = getUserByEmail(login_session['email'])
     if user is None:
         newUser = createUser(login_session)
+        user = newUser
         if newUser is None:
             response = make_response(
                 json.dumps("ERR: Error while creating a new user"), 500)
@@ -290,6 +396,11 @@ def sign_in():
 
 @app.route('/signout')
 def sign_out():
+    """ Clears the current user session
+
+    Returns:
+        Page for home
+    """
     # Only disconnect a connected user.
     credentials = login_session.get('credentials')
     if credentials is None:
@@ -319,6 +430,13 @@ def sign_out():
 
 
 def getUserByEmail(email):
+    """ Attempts to fetch a user out of the DB
+        by email
+
+    Returns:
+        User: if it exists
+        None: if it doesn't
+    """
     try:
         user = session.query(User).filter_by(user_email=email).one()
         return user
@@ -327,6 +445,12 @@ def getUserByEmail(email):
 
 
 def createUser(login_session):
+    """ Creates a user record in the database
+
+    Returns:
+        User: if it was created
+        None: if it wasn't.
+    """
     try:
         newUser = User(user_name=login_session['username'],
                        user_email=login_session['email'],
