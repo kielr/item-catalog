@@ -19,13 +19,17 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 
     <!-- Need to include the google interface for the sign in button -->
-    <script src="https://apis.google.com/js/platform.js" async defer></script>
+    <script src="https://apis.google.com/js/client:platform.js?onload=start" async defer></script>1
+
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.0/css/all.css">
 
     <!--  Include my own styles  -->
     <link rel="stylesheet" text="text/css" href="{{url_for('static', filename='stylesheets/common.css')}}">
+
+    <meta name="google-signin-client_id" content="634131632621-5cgf18gbn7lovdcv6omglve9prunn507.apps.googleusercontent.com">
+    <meta name="google-signin-scope" content="profile email openid">
 </head>
 
 <body>

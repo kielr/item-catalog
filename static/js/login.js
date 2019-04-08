@@ -13,12 +13,10 @@ function onLogin(authResult) {
             processData: false,
             contentType: 'application/octet-stream; charset=utf-8',
             success: function (result) {
+		console.log(result);
                 successPopup.text("Login Successful! Redirecting to home...");
                 successPopup.show();
                 loginBtn.hide();
-                setTimeout(function () {
-                    window.location.href = "/";
-                }, 3000);
             },
             error: function (result) {
                 failurePopup.text(JSON.stringify(result));

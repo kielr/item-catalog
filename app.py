@@ -22,7 +22,7 @@ app = Flask(__name__, template_folder='./templates/')
 # A lot of weird bugs if the process threads change.
 # Thread safety isn't in the rubric.
 # So I'm going to disable this check unless told to do otherwise.
-engine = create_engine('sqlite:///itemcatalog.db?check_same_thread=False')
+engine = create_engine('postgresql://catalog:password@localhost/catalog')
 Base.metadata.bind = engine
 
 sql_session = scoped_session(sessionmaker(bind=engine))
@@ -30,7 +30,7 @@ session = sql_session()
 
 CONTENT_TYPE_JSON = 'application/json'
 CLIENT_ID = json.loads(
-    open('gclient.json', 'r').read())['web']['client_id']
+    open('/var/www/catalog/gclient.json', 'r').read())['web']['client_id']
 
 
 # From http://flask.pocoo.org/docs/0.12/patterns/viewdecorators/
@@ -314,17 +314,17 @@ def sign_in():
         # Obviously in a real web app the
         # client_secrets would be stored safely somewhere,
         # but for now we can just load them directly here.
-        oauth = flow_from_clientsecrets('gclient.json', scope='')
-        oauth.redirect_uri = 'postmessage'
+        oauth = flow_from_clientsecrets('/var/www/catalog/gclient.json', scope='')
+        oauth.redirect_uri = "postmessage"
         credentials = oauth.step2_exchange(authCode)
     except FlowExchangeError as e:
         print(e)
-        response = make_response(json.dumps("ERR: Oauth failure"), 401)
+        response = make_response(json.dumps(str(e), 401))
         response.headers['Content-Type'] = CONTENT_TYPE_JSON
         return response
 
     # Check that the access token is valid.
-    access_token = credentials.access_token
+    access_token = credentials.access_token 
     url = ('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=%s'
            % access_token)
     h = httplib2.Http()
@@ -332,7 +332,7 @@ def sign_in():
 
     # If there was an error in the access token info, abort.
     if result.get('error') is not None:
-        response = make_response(json.dumps(result.get('error')), 500)
+        response = make_response(json.dumps(str(credentials) + " "  +  result.get('error')), 500)
         response.headers['Content-Type'] = CONTENT_TYPE_JSON
         return response
 
@@ -340,7 +340,7 @@ def sign_in():
     gplus_id = credentials.id_token['sub']
     if result['user_id'] != gplus_id:
         response = make_response(
-            json.dumps("Token's user ID doesn't match given user ID."), 401)
+            json.dumps(str(result) + "Token's user ID doesn't match given user ID."), 401)
         response.headers['Content-Type'] = CONTENT_TYPE_JSON
         return response
 
@@ -363,12 +363,11 @@ def sign_in():
         return response
 
     # Store the access token in the session for later use.
-    login_session['credentials'] = credentials.to_json()
-    login_session['gplus_id'] = gplus_id
+    login_session['access_token'] = access_token
 
     # Get user info
     userinfo_url = "https://www.googleapis.com/oauth2/v1/userinfo"
-    params = {'access_token': credentials.access_token, 'alt': 'json'}
+    params = {'access_token': access_token, 'alt': 'json'}
     answer = requests.get(userinfo_url, params=params)
     data = json.loads(answer.text)
 
@@ -402,20 +401,18 @@ def sign_out():
         Page for home
     """
     # Only disconnect a connected user.
-    credentials = login_session.get('credentials')
-    if credentials is None:
+    access_token = login_session.get('access_token')
+    if access_token is None:
         response = make_response(json.dumps('Current user not connected'), 401)
         response.headers['Content-Type'] = CONTENT_TYPE_JSON
         return response
 
-    access_token = json.loads(credentials)['access_token']
     url = 'https://accounts.google.com/o/oauth2/revoke?token=%s' % access_token
     h = httplib2.Http()
     result = h.request(url, 'GET')[0]
     if result['status'] == '200':
         # Reset the user's session.
-        del login_session['credentials']
-        del login_session['gplus_id']
+        del login_session['access_token']
         del login_session['user']
         del login_session['username']
         del login_session['email']
@@ -423,7 +420,7 @@ def sign_out():
 
         return render_template('home.htm')
     else:
-        response = make_response(json.dumps('Failed to revoke token'), 400)
+        response = make_response(json.dumps(str(result) + 'Failed to revoke token'), 400)
         print(result)
         response.headers['Content-Type'] = CONTENT_TYPE_JSON
         return response
